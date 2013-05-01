@@ -22,6 +22,9 @@ startPhantomProcess = (port, args) ->
 process.on 'exit', ->
   phantom.exit() for phantom in phanta
 
+process.on 'uncaughtException', ->
+  module.exports.destroy('all')
+
 
 # @Description: We need this because dnode does magic clever stuff with functions, but we want the function to make it intact to phantom
 wrap = (ph) ->
@@ -61,12 +64,26 @@ module.exports =
         log: null,
         'client store expiration': 0
 
-      # Creates a dNode server that listens to 
+      # Creates a dNode server that listens to
       server.listen appServer, {io}, (obj, conn) ->
         phantom = conn.remote # remote phantomjs RPC wrapper
         wrap phantom
         phanta.push phantom
         cb? phantom
+
+  destroy: (options) ->
+    if options is 'all'
+      phantom.exit() for phantom in phanta
+    else if options.instance isnt undefined
+      phanta = (
+        results = []
+        for p in phanta
+          if p isnt options.instance
+            results.push(p)
+          else
+            p.exit()
+        results
+      )
 
 
 
